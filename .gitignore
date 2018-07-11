@@ -11,4 +11,6 @@ modellibs/__pycache__
 trainer/__pycache__
 transforms/__pycache__
 utils/__pycache__
+datasets/__pycache__
+
 *.json
