@@ -1,0 +1,6 @@
+demo/
+experiments/
+pretrained/
+venv/
+__pycache__
+*.json
