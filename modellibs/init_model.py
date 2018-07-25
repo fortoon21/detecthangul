@@ -75,11 +75,34 @@ def init_model(opt):
         elif opt.resnet_model == 'resnet50':
             from modellibs.resnet.resnet import resnet50
             model = resnet50(pretrained=opt.use_pretrained, opt=opt).to(opt.device)
+        elif opt.resnet_model == 'resnet101':
+            from modellibs.resnet.resnet import resnet101
+            model = resnet101(pretrained=opt.use_pretrained, opt=opt).to(opt.device)
+
+    elif model_name == 'concatnet':
+        if opt.base_model == 'resnet18':
+            from modellibs.concatnet.concatnet import resnet18
+            model = resnet18(pretrained=opt.use_pretrained, opt=opt).to(opt.device)
+        elif opt.base_model == 'resnet50':
+            from modellibs.concatnet.concatnet import resnet50
+            model = resnet50(pretrained=opt.use_pretrained, opt=opt).to(opt.device)
+
+    elif model_name == 'elmpronet':
+        if opt.base_model == 'resnet18':
+            from modellibs.elmpronet.elmpronet import resnet18
+            model = resnet18(pretrained=opt.use_pretrained, opt=opt).to(opt.device)
+        elif opt.base_model == 'resnet50':
+            from modellibs.elmpronet.elmpronet import resnet50
+            model = resnet50(pretrained=opt.use_pretrained, opt=opt).to(opt.device)
+
 
     elif model_name == 'chanet':
         if opt.base_model == 'resnet18':
             from modellibs.chanet.chanet import chanet18
             model = chanet18(pretrained=opt.use_pretrained, opt=opt).to(opt.device)
+        elif opt.base_model == 'resnet50':
+            from modellibs.chanet.chanet import chanet50
+            model = chanet50(pretrained=opt.use_pretrained, opt=opt).to(opt.device)
 
     else:
         raise ValueError('Not implemented yet')

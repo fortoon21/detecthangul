@@ -53,6 +53,20 @@ def init_trainer(opt, trainloader, validloader, model):
                           validloader,
                           model)
 
+    elif model_name == 'concatnet':
+        from trainer.train_concatnet import Trainer
+        trainer = Trainer(opt,
+                          trainloader,
+                          validloader,
+                          model)
+
+    elif model_name == 'elepronet':
+        from trainer.train_elepronet import Trainer
+        trainer = Trainer(opt,
+                          trainloader,
+                          validloader,
+                          model)
+
     else:
         raise ValueError('not a valid model')
 

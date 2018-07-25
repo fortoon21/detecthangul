@@ -50,7 +50,7 @@ def init_dataloader_train(opt):
         opt.num_classes = 2
         from datasets.wider import WiderDetection
         wider_root = os.path.join(opt.data_root_dir, 'WIDER/WIDER_train/images')
-        list_file = 'data/wider/wider_train.txt'
+        list_file = ['data/wider/wider_train.txt']
         dataset = WiderDetection(root=wider_root,
                                  list_file=list_file,
                                  transform=transform)
@@ -83,8 +83,8 @@ def init_dataloader_train(opt):
 
     elif dataset_name == 'v_caption':
         from datasets.v_caption import V_Caption
-        data_root = os.path.join(opt.data_root_dir, 'V.DO/V_Caption')
-        list_file = 'data/v_caption/patch_train.txt'
+        data_root = os.path.join(opt.data_root_dir, '')
+        list_file = ['data/v_caption/bghangul_patch_train.txt']
         dataset = V_Caption(root=data_root,
                                  list_file=list_file,
                                  transform=transform)
@@ -176,8 +176,8 @@ def init_dataloader_valid(opt):
 
     elif dataset_name == 'v_caption':
         from datasets.v_caption import V_Caption
-        data_root = os.path.join(opt.data_root_dir, 'V.DO/V_Caption')
-        list_file = 'data/v_caption/patch_val.txt'
+        data_root = os.path.join(opt.data_root_dir, '')
+        list_file = ['data/v_caption/bghangul_patch_val.txt']
         dataset = V_Caption(root=data_root,
                                  list_file=list_file,
                                  transform=transform)

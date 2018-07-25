@@ -9,7 +9,6 @@ from loss.ssd_loss import SSDLoss
 from metrics.voc_eval import voc_eval
 from modellibs.s3fd.box_coder import S3FDBoxCoder
 from utils.average_meter import AverageMeter
-import matlab.engine
 
 class Trainer(object):
 
@@ -31,7 +30,7 @@ class Trainer(object):
         self.criterion_last = torch.nn.CrossEntropyLoss().cuda()
         self.criterion_config = torch.nn.CrossEntropyLoss().cuda()
 
-        self.optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=opt.momentum, weight_decay=opt.weight_decay)
+        self.optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
 
         self.best_loss = float('inf')
 
@@ -61,11 +60,11 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
         train_loss = 0
-        for batch_idx, (inputs, labels) in enumerate(self.train_dataloader):
-            label_first = labels[0]
-            label_middle = labels[1]
-            label_last = labels[2]
-            label_config = labels[3]
+        for batch_idx, (inputs, label_first,label_middle, label_last, label_config) in enumerate(self.train_dataloader):
+            # label_first = labels[0]
+            # label_middle = labels[1]
+            # label_last = labels[2]
+            # label_config = labels[3]
 
             inputs = inputs.to(self.opt.device)
             label_first = label_first.to(self.opt.device)
@@ -101,12 +100,8 @@ class Trainer(object):
         self.model.eval()
         test_loss = 0
 
-        for batch_idx, (inputs, labels) in enumerate(self.valid_dataloader):
+        for batch_idx, (inputs, label_first,label_middle, label_last, label_config) in enumerate(self.valid_dataloader):
             with torch.no_grad():
-                label_first = labels[0]
-                label_middle = labels[1]
-                label_last = labels[2]
-                label_config = labels[3]
 
                 inputs = inputs.to(self.opt.device)
                 label_first = label_first.to(self.opt.device)
@@ -163,7 +158,7 @@ class Trainer(object):
 
     def adjust_learning_rate(self, optimizer, epoch):
         """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-        self.current_lr = self.opt.lr * (0.1 ** (epoch // 30))
+        self.current_lr = self.opt.lr * (0.1 ** (epoch // 50))
         for param_group in optimizer.param_groups:
             param_group['lr'] = self.current_lr
 

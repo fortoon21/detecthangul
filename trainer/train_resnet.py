@@ -9,7 +9,6 @@ from loss.ssd_loss import SSDLoss
 from metrics.voc_eval import voc_eval
 from modellibs.s3fd.box_coder import S3FDBoxCoder
 from utils.average_meter import AverageMeter
-import matlab.engine
 
 class Trainer(object):
 
@@ -29,8 +28,10 @@ class Trainer(object):
         self.criterion_first = torch.nn.CrossEntropyLoss().cuda()
         self.criterion_middle = torch.nn.CrossEntropyLoss().cuda()
         self.criterion_last = torch.nn.CrossEntropyLoss().cuda()
+        self.criterion_config = torch.nn.CrossEntropyLoss().cuda()
 
-        self.optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=opt.momentum, weight_decay=opt.weight_decay)
+        self.optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=opt.momentum,
+                                         weight_decay=opt.weight_decay)
 
         self.best_loss = float('inf')
 
@@ -43,9 +44,7 @@ class Trainer(object):
 
         for epoch in range(self.start_epoch, self.max_epoch):
             self.adjust_learning_rate(self.optimizer, epoch)
-
             self.train_epoch(epoch)
-
             self.valid_epoch(epoch)
 
         print('')
@@ -60,7 +59,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
         train_loss = 0
-        for batch_idx, (inputs, label_first, label_middle, label_last) in enumerate(self.train_dataloader):
+        for batch_idx, (inputs, label_first, label_middle, label_last,) in enumerate(self.train_dataloader):
             inputs = inputs.to(self.opt.device)
             label_first = label_first.to(self.opt.device)
             label_middle = label_middle.to(self.opt.device)
@@ -81,6 +80,35 @@ class Trainer(object):
             if batch_idx % self.opt.print_freq == 0:
                 print('Epoch[%d/%d] Iter[%d/%d] Learning Rate: %.6f Total Loss: %.4f, First Loss: %.4f, Middle Loss: %.4f, Last Loss: %.4f' %
                       (epoch, self.max_epoch, batch_idx, self.max_iter_train, self.current_lr, loss.item(), loss_first.item(), loss_middle.item(), loss_last.item()))
+
+    def train_epoch_rest(self, epoch):
+        """ training """
+        self.model.train()
+        self.optimizer.zero_grad()
+
+        train_loss = 0
+        for batch_idx, (inputs, alphabet, number, symbol,) in enumerate(self.train_dataloader):
+            inputs = inputs.to(self.opt.device)
+            alphabet = alphabet.to(self.opt.device)
+            number = number.to(self.opt.device)
+            symbol = symbol.to(self.opt.device)
+
+            pred_alpha, pred_num, pred_sym = self.model(inputs)
+            loss_alpha = self.criterion_first(pred_alpha, alphabet)
+            loss_num = self.criterion_middle(pred_num, number)
+            loss_sym = self.criterion_last(pred_sym, symbol)
+            loss = loss_alpha + loss_num + loss_sym
+
+            loss.backward()
+            if ((batch_idx + 1) % self.opt.accum_grad == 0) or ((batch_idx+1) == self.max_iter_train):
+                self.optimizer.step()
+                self.model.zero_grad()
+                self.optimizer.zero_grad()
+
+            train_loss += loss.item()
+            if batch_idx % self.opt.print_freq == 0:
+                print('Epoch[%d/%d] Iter[%d/%d] Learning Rate: %.6f Total Loss: %.4f, First Loss: %.4f, Middle Loss: %.4f, Last Loss: %.4f' %
+                      (epoch, self.max_epoch, batch_idx, self.max_iter_train, self.current_lr, loss.item(), loss_alpha.item(), loss_num.item(), loss_sym.item()))
 
     def valid_epoch(self, epoch):
 

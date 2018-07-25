@@ -3,6 +3,7 @@ import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
 
+from torch.nn.parameter import Parameter
 
 # __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 #            'resnet152']
@@ -115,27 +116,27 @@ class ChaNet(nn.Module):
 
         # syllable branch
         # first
-        self.inplanes = 128
+        self.inplanes = 512
         self.layer3_first = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer3_attention_first = nn.Sequential(nn.Conv2d(512, 1, kernel_size=3, stride=1, padding=1, bias=False),
+        self.layer3_attention_first = nn.Sequential(nn.Conv2d(self.inplanes*2, 1, kernel_size=3, stride=1, padding=1, bias=False),
                                       nn.ReLU(inplace=True))
         self.layer4_first = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_first = nn.AvgPool2d(3, stride=1)
         self.fc_first = nn.Linear(512 * block.expansion, opt.first_class_num)
 
         # middle
-        self.inplanes = 128
+        self.inplanes = 512
         self.layer3_middle = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer3_attention_middle = nn.Sequential(nn.Conv2d(512, 1, kernel_size=3, stride=1, padding=1, bias=False),
+        self.layer3_attention_middle = nn.Sequential(nn.Conv2d(self.inplanes*2, 1, kernel_size=3, stride=1, padding=1, bias=False),
                                        nn.ReLU(inplace=True))
         self.layer4_middle = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_middle = nn.AvgPool2d(3, stride=1)
         self.fc_middle = nn.Linear(512 * block.expansion, opt.middle_class_num)
 
         # last
-        self.inplanes = 128
+        self.inplanes = 512
         self.layer3_last = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer3_attention_last = nn.Sequential(nn.Conv2d(512, 1, kernel_size=3, stride=1, padding=1, bias=False),
+        self.layer3_attention_last = nn.Sequential(nn.Conv2d(self.inplanes*2, 1, kernel_size=3, stride=1, padding=1, bias=False),
                                      nn.ReLU(inplace=True))
         self.layer4_last = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_last = nn.AvgPool2d(3, stride=1)
@@ -182,6 +183,10 @@ class ChaNet(nn.Module):
         x_first_attention = self.layer3_attention_first(torch.cat((x_first, x_config), 1))
         x_middle_attention = self.layer3_attention_middle(torch.cat((x_middle, x_config), 1))
         x_last_attention = self.layer3_attention_last(torch.cat((x_last, x_config), 1))
+
+        x_first_attention=torch.sigmoid(x_first_attention)
+        x_middle_attention=torch.sigmoid(x_middle_attention)
+        x_last_attention=torch.sigmoid(x_last_attention)
 
         x_first = x_first_attention.expand_as(x_first) * x_first
         x_middle = x_middle_attention.expand_as(x_middle) * x_middle
@@ -233,14 +238,27 @@ def resnet34(pretrained=False, **kwargs):
     return model
 
 
-def resnet50(pretrained, opt):
+def chanet50(pretrained, opt):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ChaNet(Bottleneck, [3, 4, 6, 3], opt)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']), strict=False)
+        model_state_dict = model_zoo.load_url(model_urls['resnet18'])
+        own_state = model.state_dict()
+        for name, param in model_state_dict.items():
+            if name in own_state:
+                if isinstance(param, Parameter):
+                    # backwards compatibility for serialized parameters
+                    param = param.data
+                try:
+                    own_state[name].copy_(param)
+                except Exception:
+                    raise RuntimeError('While copying the parameter named {}, '
+                                       'whose dimensions in the model are {} and '
+                                       'whose dimensions in the checkpoint are {}.'
+                                       .format(name, own_state[name].size(), param.size()))
     return model
 
 

@@ -29,18 +29,19 @@ class V_Caption(data.Dataset):
         self.fnames = []
         self.labels = []
 
-        with open(list_file) as f:
-            lines = f.readlines()
-            self.num_imgs = len(lines)
+        for file in list_file:
+            with open(file) as f:
+                lines = f.readlines()
+                self.num_imgs = len(lines)
 
-        for line in lines:
-            splited = line.strip().split()
-            self.fnames.append(splited[0])
-            label = []
-            for i in range(1, 5):
-                c = splited[i]
-                label.append(int(c))
-            self.labels.append(torch.LongTensor(label))
+            for line in lines:
+                splited = line.strip().split()
+                self.fnames.append(splited[0])
+                label = []
+                for i in range(1, 5):
+                    c = splited[i]
+                    label.append(int(c))
+                self.labels.append(torch.LongTensor(label))
 
     def __getitem__(self, idx):
         '''Load image.
@@ -53,7 +54,8 @@ class V_Caption(data.Dataset):
         '''
         # Load image and boxes.
         fname = self.fnames[idx]
-        img = Image.open(os.path.join(self.root, fname))
+
+        img = Image.open(os.path.join(self.root, fname[:]))
         if img.mode != 'RGB':
             img = img.convert('RGB')
 
@@ -64,7 +66,9 @@ class V_Caption(data.Dataset):
 
         if self.transform:
             img = self.transform(img)
-        return img, (labels_first, labels_middle, labels_last, labels_config)
+
+        # return img, labels_first, labels_middle, labels_last, labels_config
+        return img, labels_first, labels_middle, labels_last, labels_config
 
     def __len__(self):
         return self.num_imgs

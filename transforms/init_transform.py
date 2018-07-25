@@ -27,6 +27,14 @@ def init_transforms(opt, subset):
         from modellibs.resnet.transforms import ResnetAugmentation
         transform = ResnetAugmentation(opt, subset)
 
+    elif model_name in ['elmpronet']:
+        from modellibs.resnet.transforms import ResnetAugmentation
+        transform = ResnetAugmentation(opt, subset)
+
+    elif model_name in ['concatnet']:
+        from modellibs.resnet.transforms import ResnetAugmentation
+        transform = ResnetAugmentation(opt, subset)
+
     else:
         raise ValueError('Not a valid model')
 

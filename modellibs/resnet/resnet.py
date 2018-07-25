@@ -1,6 +1,9 @@
+import torch
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
+
+from torch.nn.parameter import Parameter
 
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
@@ -108,7 +111,7 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(6, stride=1)
-        self.fc = nn.Linear(256 * block.expansion, 1000)
+
         self.fc_first = nn.Linear(256 * block.expansion, opt.first_class_num)
         self.fc_middle = nn.Linear(256 * block.expansion, opt.middle_class_num)
         self.fc_last = nn.Linear(256 * block.expansion, opt.last_class_num)
@@ -165,7 +168,24 @@ def resnet18(pretrained, opt):
     """
     model = ResNet(BasicBlock, [2, 2, 2, 2], opt)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']), strict=False)
+        # model.load_state_dict(model_zoo.load_url(model_urls['resnet18']), strict=False)
+        model_state_dict = model_zoo.load_url(model_urls['resnet18'])
+        own_state = model.state_dict()
+        for name, param in model_state_dict.items():
+            if name in own_state:
+                if isinstance(param, Parameter):
+                    # backwards compatibility for serialized parameters
+                    param = param.data
+                try:
+                    own_state[name].copy_(param)
+                except Exception:
+                    raise RuntimeError('While copying the parameter named {}, '
+                                       'whose dimensions in the model are {} and '
+                                       'whose dimensions in the checkpoint are {}.'
+                                       .format(name, own_state[name].size(), param.size()))
+            # else:
+            #     raise KeyError('unexpected key "{}" in state_dict'
+            #                    .format(name))
     return model
 
 
@@ -198,7 +218,24 @@ def resnet101(pretrained=False, **kwargs):
     """
     model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
+        # model.load_state_dict(model_zoo.load_url(model_urls['resnet18']), strict=False)
+        model_state_dict = model_zoo.load_url(model_urls['resnet18'])
+        own_state = model.state_dict()
+        for name, param in model_state_dict.items():
+            if name in own_state:
+                if isinstance(param, Parameter):
+                    # backwards compatibility for serialized parameters
+                    param = param.data
+                try:
+                    own_state[name].copy_(param)
+                except Exception:
+                    raise RuntimeError('While copying the parameter named {}, '
+                                       'whose dimensions in the model are {} and '
+                                       'whose dimensions in the checkpoint are {}.'
+                                       .format(name, own_state[name].size(), param.size()))
+            # else:
+            #     raise KeyError('unexpected key "{}" in state_dict'
+            #                    .format(name))
     return model
 
 

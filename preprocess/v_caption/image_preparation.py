@@ -1,4 +1,6 @@
 import os
+from os import listdir
+from os.path import isfile, join
 import argparse
 import json
 import cv2
@@ -42,6 +44,10 @@ JONG_reduced = (
     u'ㅆ', u'ㅇ', u'ㅈ', u'ㅊ', u'ㅋ', u'ㅌ', u'ㅍ', u'ㅎ'
 )
 
+ALPHABET='abcdefghijklnmopqrstuvwxyzABCDEFGHIJKLNMOPQRSTUVWXYZ'
+
+NUMBER='0123456789'
+
 JAMO = CHO + JOONG + JONG[1:]
 FIRST_HANGUL_UNICODE = 0xAC00  # '가'
 LAST_HANGUL_UNICODE = 0xD7A3  # '힣'
@@ -55,6 +61,8 @@ LAST_ALPHABET_UPPER_UNICODE = 0x005A  # 'Z'
 FIRST_ALPHABET_LOWER_UNICODE = 0x0061  # 'a'
 LAST_ALPHABET_LOWER_UNICODE = 0x007A  # 'z'
 
+Ix_to_title={0:'hangul', 1:'alphabet', 2:'number', 3:'bghangul', 4:'bgalphabet', 5:'bgnumber'}
+
 
 def is_jamo(letter):
     return letter in JAMO
@@ -62,15 +70,14 @@ def is_jamo(letter):
 def is_hangul(phrase): # TODO: need tuning!!
     for letter in phrase:
         code = ord(letter)
-        if (code < FIRST_HANGUL_UNICODE or code > LAST_HANGUL_UNICODE) and not is_jamo(letter):
-            return False
-
-    return True
+        if is_jamo(letter) or (FIRST_HANGUL_UNICODE<=code<=LAST_HANGUL_UNICODE):
+            return True
+    return False
 
 def is_alphabet(phrase): # TODO: need tuning!!
     unicode_value = ord(phrase)
-    if (unicode_value >= FIRST_ALPHABET_UPPER_UNICODE and unicode_value <= LAST_ALPHABET_UPPER_UNICODE) \
-       or (unicode_value >= FIRST_ALPHABET_LOWER_UNICODE and unicode_value <= LAST_ALPHABET_LOWER_UNICODE):
+    if (FIRST_ALPHABET_UPPER_UNICODE<=unicode_value <= LAST_ALPHABET_UPPER_UNICODE) \
+       or (FIRST_ALPHABET_LOWER_UNICODE <= unicode_value <= LAST_ALPHABET_LOWER_UNICODE):
         return True
     else:
         return False
@@ -78,11 +85,14 @@ def is_alphabet(phrase): # TODO: need tuning!!
 def is_number(phrase): # TODO: need tuning!!
     for letter in phrase:
         code = ord(letter)
-        if (code < FIRST_NUMBER_UNICODE or code > LAST_NUMBER_UNICODE):
-            return False
-    return True
+        if (FIRST_NUMBER_UNICODE <=code <= LAST_NUMBER_UNICODE):
+            return True
+    return False
+
+
 
 def class_assign(caption):
+
     if len(caption) == 1:
         if is_hangul(caption):
 
@@ -92,8 +102,7 @@ def class_assign(caption):
                     result_dict['hangul_jamo'][caption] += 1
                 else:
                     result_dict['hangul_jamo'][caption] = 1
-
-                class_num = 10000
+                class_num = -1
 
             else:
 
@@ -126,7 +135,7 @@ def class_assign(caption):
 
                 CHO_class_num = CHO.index(first_sung)
                 JOONG_class_num = JOONG.index(middle_sung)
-                JONG_class_num = JONG_reduced.index(last_sung)
+                JONG_class_num = JONG.index(last_sung)
                 class_num = [CHO_class_num, JOONG_class_num, JONG_class_num, config_class_num]
 
         elif is_alphabet(caption):
@@ -136,7 +145,7 @@ def class_assign(caption):
             else:
                 result_dict['alphabet'][caption] = 1
 
-            class_num = 6
+            class_num = ALPHABET.index(caption)
 
         elif is_number(caption):
 
@@ -145,7 +154,7 @@ def class_assign(caption):
             else:
                 result_dict['number'][caption] = 1
 
-            class_num = 7
+            class_num = NUMBER.index(caption)
 
         else:
             if caption in result_dict['etc']:
@@ -153,7 +162,7 @@ def class_assign(caption):
             else:
                 result_dict['etc'][caption] = 1
 
-            class_num = 8
+            class_num = -1
 
     else:
         if caption in result_dict['non_single']:
@@ -161,10 +170,10 @@ def class_assign(caption):
         else:
             result_dict['non_single'][caption] = 1
 
-        class_num = 10000
+        class_num = -1
 
         if caption == '...':
-            class_num = 8
+            class_num =-1
 
     return class_num
 
@@ -172,25 +181,26 @@ def make_dir(path):
     if not os.path.exists(path):
         os.mkdir(path)
 
+
+def write_txtnimg(f, root, info,  img):
+
+    image_path = os.path.join('/{}/{}_{}_{}.jpg'.format(info[3], info[0], info[1], info[2]))
+
+    cv2.imwrite(os.path.join(root, '{}/{}_{}_{}.jpg').format(info[3],info[0], info[1],info[2]), img)
+    f.write(image_path)
+
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--anno_root", type=str, default="/media/son/Repository2/V.DO/V_Caption")
+    parser.add_argument("--anno_root", type=str, default="/home/jade/ws/vdotdo")
     parser.add_argument("--valid_set", type=list, default=['000481', '000482', '001293', '001294', '001771', '001772'])
     parser.add_argument("--save_dir", type=str, default='hangul_patch')
-    parser.add_argument("--task_name", type=str, default='ocr_demo5')
+    parser.add_argument("--task_name", type=str, default='background_result')
 
     args = parser.parse_args()
 
     anno_root = args.anno_root
-
-    make_dir(os.path.join(args.anno_root, args.save_dir))
-
-    with open(os.path.join(anno_root, '{}.json'.format(args.task_name))) as f:
-        anno = json.load(f)
-
-    f_1 = open('patch_train.txt', 'w')
-    f_2 = open('patch_val.txt', 'w')
 
     result_dict = dict()
     result_dict['hangul'] = dict()
@@ -204,114 +214,147 @@ if __name__=='__main__':
     stat_dict['middle'] = dict()
     stat_dict['last'] = dict()
 
-    count = 0
-    for clip in anno['annotation']['clips']:
+    anno_dic={}
+    Is_bg=""
+    json_files = [pos_json for pos_json in os.listdir(args.anno_root) if pos_json.endswith('.json')]
 
-        clip_name = clip['clip_name']
 
-        if clip_name in args.valid_set:
-            f = f_2  # validation set
-        else:
-            f = f_1  # training set
+    for file in json_files:
+        with open(os.path.join(anno_root, file)) as f:
+            anno_dic[file[:-5]]= json.load(f)
 
-        clip_count = 0
-        for image in clip['images']:
+    for key, anno in anno_dic.items():
+        print('Start ',key)
+        count = 0
+        if key.startswith('background'):
+            Is_bg="bg"
+        else : Is_bg=""
 
-            image_name = image['filename']
-            if clip_name == '000487' and image_name == '0001.jpg':
-                continue
-            elif clip_name == '000487' and image_name == '0020.jpg':
-                continue
-            elif clip_name == '000492' and image_name == '0104.jpg':
-                continue
-            elif clip_name == '000494' and image_name == '0040.jpg':
-                continue
-            elif clip_name == '000494' and image_name == '0081.jpg':
-                continue
-            elif clip_name == '001307' and image_name == '0004.jpg':
-                continue
-            elif clip_name == '001309' and image_name == '0043.jpg':
-                continue
-            elif clip_name == '001309' and image_name == '0044.jpg':
-                continue
-            elif clip_name == '001309' and image_name == '0045.jpg':
-                continue
-            elif clip_name == '001309' and image_name == '0046.jpg':
-                continue
-            elif clip_name == '001784' and image_name == '0070.jpg':
-                continue
-            elif clip_name == '002210' and image_name == '0002.jpg':
-                continue
+        save_dirh='{}hangul_patch'.format(Is_bg)
+        save_dira='{}alphabet_patch'.format(Is_bg)
+        save_dirn='{}number_patch'.format(Is_bg)
 
-            im = cv2.imread(os.path.join(anno_root, args.task_name, clip_name, image_name))
+        make_dir(os.path.join(args.anno_root, save_dirh))
+        make_dir(os.path.join(args.anno_root, save_dira))
+        make_dir(os.path.join(args.anno_root, save_dirn))
 
-            sub_count = 1
-            for bbox in image['bbox']:
+        f_h1 = open(anno_root + '/{}hangul_patch_train.txt'.format(Is_bg), 'w')
+        f_h2 = open(anno_root + '/{}hangul_patch_val.txt'.format(Is_bg), 'w')
+        f_a1 = open(anno_root + '/{}alphabet_patch_train.txt'.format(Is_bg), 'w')
+        f_a2 = open(anno_root + '/{}alphabet_patch_val.txt'.format(Is_bg), 'w')
+        f_n1 = open(anno_root + '/{}number_patch_train.txt'.format(Is_bg), 'w')
+        f_n2 = open(anno_root + '/{}number_patch_val.txt'.format(Is_bg), 'w')
 
-                x1 = int(bbox['start_x'])
-                x2 = int(bbox['end_x'])
-                y1 = int(bbox['start_y'])
-                y2 = int(bbox['end_y'])
+        for clip in anno['annotation']['clips']:
 
-                cropped_img = im[y1:y2, x1:x2]
+            clip_name = clip['clip_name']
 
-                # cv2.imshow('photo', cropped_img)
-                # cv2.waitKey(0)
+            divider = random.randint(0, 9)
+            if divider <= 1:
+                f =  [f_h2, f_a2,f_n2] # validation set
+            else:
+                f = [f_h1, f_a1, f_n1]  # training set
+            # if clip_name in args.valid_set:
+            #     f =  [f_h2, f_a2,f_n2] # validation set
+            # else:
+            #     f = [f_h1, f_a1,f_n1] # training set
 
-                # class number assign with caption
-                caption = bbox['caption']
-                class_num = class_assign(caption)
-                if not isinstance(class_num, list) and class_num == 10000:
-                    continue
+            clip_count = 0
+            for image in clip['images']:
 
-                if int(clip_name) < 500 and (x2 < 146 and y2 < 120):
-                    if clip_count > 14:
-                        continue
-                    else:
-                        clip_count += 1
-                elif int(clip_name) > 500 and int(clip_name) < 1500 and (x2 < 235 and y2 < 97):
-                    if clip_count > 11:
-                        continue
-                    else:
-                        clip_count += 1
-                elif int(clip_name) > 1500 and (x2 < 189 and y2 < 101):
-                    if clip_count > 20:
-                        continue
-                    else:
-                        clip_count += 1
-
+                image_name = image['filename']
+                im = cv2.imread(os.path.join(anno_root, key, clip_name, image_name))
                 image_name_edited = image_name.split('.')[0]
-                image_path = os.path.join(args.save_dir, '{}_{}_{}.jpg'.format(clip_name, image_name_edited, sub_count))
-                f.write(image_path)
-                cv2.imwrite(os.path.join(args.anno_root, args.save_dir, '{}_{}_{}.jpg'.format(clip_name, image_name_edited, sub_count)), cropped_img)
 
-                for i, cls in enumerate(class_num):
-                    cls = str(int(cls))
-                    f.write(' ' + cls)
+                sub_count = 1
+                for bbox in image['bbox']:
 
-                    if i == 0:
-                        try:
-                            stat_dict['first'][cls] += 1
-                        except:
-                            stat_dict['first'][cls] = 1
-                    elif i == 1:
-                        try:
-                            stat_dict['middle'][cls] += 1
-                        except:
-                            stat_dict['middle'][cls] = 1
-                    elif i == 2:
-                        try:
-                            stat_dict['last'][cls] += 1
-                        except:
-                            stat_dict['last'][cls] = 1
-                    else:
-                        raise NotImplementedError
+                    x1 = int(bbox['start_x'])
+                    x2 = int(bbox['end_x'])
+                    y1 = int(bbox['start_y'])
+                    y2 = int(bbox['end_y'])
 
-                f.write('\n')
-                sub_count += 1
+                    cropped_img = im[y1:y2, x1:x2]
+
+                    # cv2.imshow('photo', cropped_img)
+                    # cv2.waitKey(0)
+
+                    # class number assign with caption
+                    caption = bbox['caption']
+                    if caption is None:
+                        continue
+                    class_num = class_assign(caption)
+
+                    # Nullify logo
+                    if int(clip_name) < 500 and (x2 < 146 and y2 < 120):
+                        if clip_count > 14:
+                            continue
+                        else:
+                            clip_count += 1
+                    elif int(clip_name) > 500 and int(clip_name) < 1500 and (x2 < 235 and y2 < 97):
+                        if clip_count > 11:
+                            continue
+                        else:
+                            clip_count += 1
+                    elif int(clip_name) > 1500 and (x2 < 189 and y2 < 101):
+                        if clip_count > 20:
+                            continue
+                        else:
+                            clip_count += 1
+
+                    if is_hangul(caption) :
+
+                        image_path = os.path.join('/'+save_dirh,
+                                                  '{}_{}_{}.jpg'.format(clip_name, image_name_edited, sub_count))
+
+                        cv2.imwrite(os.path.join(anno_root,save_dirh,
+                                                 '{}_{}_{}.jpg'.format(clip_name, image_name_edited, sub_count)),
+                                    cropped_img)
+
+                        f[0].write(image_path)
+
+                        # hangul cho joong jong
+
+                        if isinstance(class_num,list):
+                            for i, cls in enumerate(class_num):
+                                cls = str(int(cls))
+                                f[0].write(' ' + cls)
+
+                                if i == 0:
+                                    try:
+                                        stat_dict['first'][cls] += 1
+                                    except:
+                                        stat_dict['first'][cls] = 1
+                                elif i == 1:
+                                    try:
+                                        stat_dict['middle'][cls] += 1
+                                    except:
+                                        stat_dict['middle'][cls] = 1
+                                elif i == 2:
+                                    try:
+                                        stat_dict['last'][cls] += 1
+                                    except:
+                                        stat_dict['last'][cls] = 1
+
+                        f[0].write('\n')
+                        sub_count += 1
+
+                    elif class_num!=-1:
+                        if is_alphabet(caption):
+
+                            write_txtnimg(f[1],anno_root,[clip_name, image_name_edited, sub_count, save_dira], cropped_img)
+
+                            f[1].write(' '+str(class_num)+'\n')
+
+                        elif is_number(caption):
+                            write_txtnimg(f[2], anno_root,[clip_name, image_name_edited, sub_count, save_dirn], cropped_img)
+                            f[2].write(' '+str(class_num)+'\n')
+
+
                 count += 1
 
-            print('{} processed'.format(count))
+                print('{} processed'.format(count))
 
-    f.close()
-    print('done')
+            print('done')
+    for file in f:
+        file.close()

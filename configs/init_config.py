@@ -5,7 +5,8 @@ from configs.refinedet import refinedet_config
 from configs.s3fd import s3fd_config
 from configs.resnet import resnet_config
 from configs.chanet import chanet_config
-
+from configs.elmpronet import elmpronet_config
+from configs.concatnet import concatnet_config
 
 def init_config(args):
 
@@ -34,6 +35,12 @@ def init_config(args):
 
     elif model_name == 'chanet':
         opt = chanet_config(args)
+
+    elif model_name=='elmpronet':
+        opt=elmpronet_config(args)
+
+    elif model_name=='concatnet':
+        opt=concatnet_config(args)
 
     else:
         raise ValueError('[!] model not found!')
