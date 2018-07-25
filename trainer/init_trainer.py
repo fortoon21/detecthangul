@@ -60,8 +60,8 @@ def init_trainer(opt, trainloader, validloader, model):
                           validloader,
                           model)
 
-    elif model_name == 'elepronet':
-        from trainer.train_elepronet import Trainer
+    elif model_name == 'elmpronet':
+        from trainer.train_elmpronet import Trainer
         trainer = Trainer(opt,
                           trainloader,
                           validloader,

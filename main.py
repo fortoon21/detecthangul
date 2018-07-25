@@ -35,7 +35,7 @@ if __name__ == "__main__":
     parser.add_argument('--print_freq_eval', type=int, default=100)
 
     parser.add_argument('--start_epochs', type=int, default=1)
-    parser.add_argument('--max_epochs', type=int, default=150)
+    parser.add_argument('--max_epochs', type=int, default=90)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 

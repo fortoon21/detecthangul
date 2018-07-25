@@ -30,7 +30,7 @@ class Trainer(object):
         self.criterion_last = torch.nn.CrossEntropyLoss().cuda()
         self.criterion_config = torch.nn.CrossEntropyLoss().cuda()
 
-        self.optimizer = torch.optim.SGD(model.parameters(),momentum=opt.momentum, lr=opt.lr, weight_decay=opt.weight_decay)
+        self.optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
 
         self.best_loss = float('inf')
 

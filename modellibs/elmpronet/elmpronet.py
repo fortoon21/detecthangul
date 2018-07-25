@@ -118,8 +118,6 @@ class ResNet(nn.Module):
         # first
         self.inplanes = 512
         self.layer3_first = self._make_layer(block, 256, layers[2], stride=2)
-        self.conv_first=conv3x3(256,256)
-        self.bn_first=nn.BatchNorm2d(256)
         self.layer4_first = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_first = nn.AvgPool2d(3, stride=1)
         self.fc_first = nn.Linear(512 * block.expansion, opt.first_class_num)
@@ -127,8 +125,6 @@ class ResNet(nn.Module):
         # middle
         self.inplanes = 512
         self.layer3_middle = self._make_layer(block, 256, layers[2], stride=2)
-        self.conv_middle=conv3x3(256,256)
-        self.bn_middle=nn.BatchNorm2d(256)
         self.layer4_middle = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_middle = nn.AvgPool2d(3, stride=1)
         self.fc_middle = nn.Linear(512 * block.expansion, opt.middle_class_num)
@@ -136,8 +132,6 @@ class ResNet(nn.Module):
         # last
         self.inplanes = 512
         self.layer3_last = self._make_layer(block, 256, layers[2], stride=2)
-        self.conv_last=conv3x3(256,256)
-        self.bn_last=nn.BatchNorm2d(256)
         self.layer4_last = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_last = nn.AvgPool2d(3, stride=1)
         self.fc_last = nn.Linear(512 * block.expansion, opt.last_class_num)
@@ -180,23 +174,23 @@ class ResNet(nn.Module):
         x_middle = self.layer3_middle(x)
         x_last = self.layer3_last(x)
 
-
         x_firstp = x_first*x_config
         x_middlep = x_middle *x_config
         x_lastp = x_last*x_config
 
-        x_firstp=nn.ReLU(self.bn_first(self.conv_first(x_firstp)))
-        x_middlep=nn.ReLU(self.bn_middle(self.conv_middle(x_middlep)))
-        x_lastp=nn.ReLU(self.bn_last(self.conv_last(x_lastp)))
-
-        x_first+=x_firstp
-        x_middle+=x_middlep
-        x_last+=x_lastp
 
         x_config = self.layer4_config(x_config)
-        x_first = self.layer4_first(x_first)
-        x_middle = self.layer4_middle(x_middle)
-        x_last = self.layer4_last(x_last)
+        x_firstp= self.layer4_first(x_firstp)
+        x_middlep= self.layer4_middle(x_middlep)
+        x_lastp= self.layer4_last(x_lastp)
+
+        # x_firstp = x_firstp.expand_as(x_first)
+        # x_middlep = x_middlep.expand_as(x_middle)
+        # x_lastp = x_lastp.expand_as(x_last)
+
+        x_first=x_firstp
+        x_middle=x_middlep
+        x_last=x_lastp
 
         x_config = self.avgpool_config(x_config)
         x_first = self.avgpool_first(x_first)
