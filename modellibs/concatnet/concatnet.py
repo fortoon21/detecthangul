@@ -119,7 +119,9 @@ class ResNet(nn.Module):
         self.inplanes = 512
 
         self.layer3_first = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer3_obo_first=nn.Conv2d(512, 256, kernel_size=1)
+        # self.layer3_obo_first=nn.Conv2d(512, 256, kernel_size=1)
+
+
         self.layer4_first = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_first = nn.AvgPool2d(3, stride=1)
         self.fc_first = nn.Linear(512 * block.expansion, opt.first_class_num)
@@ -127,7 +129,7 @@ class ResNet(nn.Module):
         # middle
         self.inplanes = 512
         self.layer3_middle = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer3_obo_middle=nn.Conv2d(512, 256, kernel_size=1)
+
         self.layer4_middle = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_middle = nn.AvgPool2d(3, stride=1)
         self.fc_middle = nn.Linear(512 * block.expansion, opt.middle_class_num)
@@ -135,15 +137,15 @@ class ResNet(nn.Module):
         # last
         self.inplanes = 512
         self.layer3_last = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer3_obo_last=nn.Conv2d(512, 256, kernel_size=1)
+
         self.layer4_last = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool_last = nn.AvgPool2d(3, stride=1)
         self.fc_last = nn.Linear(512 * block.expansion, opt.last_class_num)
 
-        self.Seq=nn.Sequential([nn.Conv2d(256, 256,kernel_size=3,padding=1),
-                                nn.BatchNorm2d(256),
+        self.Seq=nn.Sequential(nn.Conv2d(2048, 1024,kernel_size=3,padding=1),
+                                nn.BatchNorm2d(1024),
                                 nn.ReLU()
-                  ])
+                                )
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -182,14 +184,15 @@ class ResNet(nn.Module):
         x_first = self.layer3_first(x)
         x_middle = self.layer3_middle(x)
         x_last = self.layer3_last(x)
+        y=torch.cat((x_first, x_config),1)
+        x_first_3x3 = self.Seq(torch.cat((x_first, x_config), 1))
+        x_middle_3x3 = self.Seq(torch.cat((x_middle, x_config), 1))
+        x_last_3x3 = self.Seq(torch.cat((x_last, x_config), 1))
 
-        x_first_obo = self.layer3_obo_first(torch.cat((x_first, x_config), 1))
-        x_middle_obo = self.layer3_obo_middle(torch.cat((x_middle, x_config), 1))
-        x_last_obo = self.layer3_obo_last(torch.cat((x_last, x_config), 1))
-
-        x_first=x_first_obo+self.Seq(x_first)
-        x_middle=x_middle_obo+self.Seq(x_middle)
-        x_last=x_last_obo+self.Seq(x_last)
+        # x_first=x_first_obo+self.Seq(x_first)
+        x_first=torch.add(x_first, x_first_3x3)
+        x_middle=torch.add(x_middle,x_middle_3x3)
+        x_last=torch.add(x_last,x_last_3x3)
 
         x_config = self.layer4_config(x_config)
         x_first = self.layer4_first(x_first)

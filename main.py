@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument('--command', type=str, default='train')
     parser.add_argument('--dataset', type=str, default='v_caption')
     parser.add_argument('--task', type=str, default='classification')
-    parser.add_argument('--model', type=str, default='elmpronet')
+    parser.add_argument('--model', type=str, default='concatnet')
     parser.add_argument('--resume', type=bool, default=False)
     parser.add_argument('--resume_path', type=str, default='/home/jade/ws/detectron1/experiments/v_caption_classification_resnet/v_caption_classification_resnet_best_loss_0.018516/model_best.pth')
 
